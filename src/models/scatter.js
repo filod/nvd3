@@ -17,7 +17,9 @@ nv.models.scatter = function() {
     , getY         = function(d) { return d.y } // accessor to get the y value
     , getSize      = function(d) { return d.size || 1} // accessor to get the point size
     , getShape     = function(d) { return d.shape || 'circle' } // accessor to get point shape
+    , getText     = function(d) { return d.id }
     , onlyCircles  = true // Set to false to use shapes
+    , withText  = false
     , forceX       = [] // List of numbers to Force into the X scale (ie. 0, or a max / min, etc.)
     , forceY       = [] // List of numbers to Force into the Y scale
     , forceSize    = [] // List of numbers to Force into the Size scale
@@ -34,8 +36,8 @@ nv.models.scatter = function() {
     , sizeDomain   = null // Override point size domain
     , sizeRange    = null
     , singlePoint  = false
-    , dispatch     = d3.dispatch('elementClick', 'elementMouseover', 'elementMouseout')
-    , useVoronoi   = true
+    , dispatch     = d3.dispatch('elementClick', 'elementMouseover', 'elementMouseout', 'canvasClick')
+    , useVoronoi   = false
     ;
 
   //============================================================
@@ -135,7 +137,10 @@ nv.models.scatter = function() {
       gEnter.append('g').attr('class', 'nv-groups');
       gEnter.append('g').attr('class', 'nv-point-paths');
 
-      wrap.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+      wrap.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+      d3.select('.nv-background').on('click', function (d) {
+          dispatch.canvasClick()
+        })
 
       //------------------------------------------------------------
 
@@ -167,9 +172,9 @@ nv.models.scatter = function() {
                 var pX = getX(point,pointIndex) + Math.random() * 1e-7;
                 var pY = getY(point,pointIndex) + Math.random() * 1e-7;
 
-                return [x(pX), 
-                        y(pY), 
-                        groupIndex, 
+                return [x(pX),
+                        y(pY),
+                        groupIndex,
                         pointIndex, point]; //temp hack to add noise untill I think of a better way so there are no duplicates
               })
               .filter(function(pointArray, pointIndex) {
@@ -237,10 +242,10 @@ nv.models.scatter = function() {
           pointPaths.exit().remove();
           pointPaths
               .attr('d', function(d) {
-                if (d.data.length === 0) 
+                if (d.data.length === 0)
                     return 'M 0 0'
-                else 
-                    return 'M' + d.data.join('L') + 'Z'; 
+                else
+                    return 'M' + d.data.join('L') + 'Z';
               });
 
           pointPaths
@@ -301,8 +306,8 @@ nv.models.scatter = function() {
             .selectAll('.nv-point')
               //.data(dataWithPoints)
               //.style('pointer-events', 'auto') // recativate events, disabled by css
-              .on('click', function(d,i) { 
-                //nv.log('test', d, i);
+              .on('click', function(d,i) {
+                // nv.log('test', d, i);
                 if (needsUpdate || !data[d.series]) return 0; //check if this is a dummy point
                 var series = data[d.series],
                     point  = series.values[i];
@@ -348,7 +353,8 @@ nv.models.scatter = function() {
       needsUpdate = true;
 
       var groups = wrap.select('.nv-groups').selectAll('.nv-group')
-          .data(function(d) { return d }, function(d) { return d.key });
+          .data(function(d) { return d }, function(d) { return d.key })
+          ;
       groups.enter().append('g')
           .style('stroke-opacity', 1e-6)
           .style('fill-opacity', 1e-6);
@@ -374,6 +380,14 @@ nv.models.scatter = function() {
             .attr('cx', function(d,i) { return x0(getX(d,i)) })
             .attr('cy', function(d,i) { return y0(getY(d,i)) })
             .attr('r', function(d,i) { return Math.sqrt(z(getSize(d,i))/Math.PI) });
+        if (withText) {
+          points.enter().append('text')
+            .attr('class', 'nv-point-text')
+            .attr('x', function(d,i) { return x0(getX(d,i)) })
+            .attr('y', function(d,i) { return y0(getY(d,i)) })
+            // .style('opacity', 0)
+            .text(getText)
+        }
         points.exit().remove();
         groups.exit().selectAll('path.nv-point').transition()
             .attr('cx', function(d,i) { return x(getX(d,i)) })
@@ -382,7 +396,8 @@ nv.models.scatter = function() {
         points.each(function(d,i) {
           d3.select(this)
             .classed('nv-point', true)
-            .classed('nv-point-' + i, true);
+            .classed('nv-point-' + i, true)
+            .classed('nv-point-uid-' + d.uid, true);
         });
         points.transition()
             .attr('cx', function(d,i) { return x(getX(d,i)) })
@@ -430,7 +445,7 @@ nv.models.scatter = function() {
       clearTimeout(timeoutID); // stop repeat calls to updateInteractiveLayer
       timeoutID = setTimeout(updateInteractiveLayer, 300);
       //updateInteractiveLayer();
-
+      chart.updateInteractiveLayer = updateInteractiveLayer
       //store old scales for use in transitions on update
       x0 = x.copy();
       y0 = y.copy();
@@ -445,6 +460,7 @@ nv.models.scatter = function() {
   //============================================================
   // Event Handling/Dispatching (out of chart's scope)
   //------------------------------------------------------------
+
 
   dispatch.on('elementMouseover.point', function(d) {
     if (interactive)

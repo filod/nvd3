@@ -31,8 +31,8 @@ nv.models.scatterChart = function() {
     , tooltips     = true
     , tooltipX     = function(key, x, y) { return '<strong>' + x + '</strong>' }
     , tooltipY     = function(key, x, y) { return '<strong>' + y + '</strong>' }
-    //, tooltip      = function(key, x, y) { return '<h3>' + key + '</h3>' }
-    , tooltip      = null
+    , tooltip      = function(key, x, y) { return '<h3>' + key + '</h3>' }
+    // , tooltip      = null
     , state = {}
     , defaultState = null
     , dispatch     = d3.dispatch('tooltipShow', 'tooltipHide', 'stateChange', 'changeState')
@@ -157,7 +157,7 @@ nv.models.scatterChart = function() {
       //------------------------------------------------------------
       // Setup containers and skeleton of chart
 
-      var wrap = container.selectAll('g.nv-wrap.nv-scatterChart').data([data]);
+      var wrap = container.selectAll('.nv-wrap.nv-scatterChart').data([data]);
       var wrapEnter = wrap.enter().append('g').attr('class', 'nvd3 nv-wrap nv-scatterChart nv-chart-' + scatter.id());
       var gEnter = wrapEnter.append('g');
       var g = wrap.select('g');
@@ -167,7 +167,8 @@ nv.models.scatterChart = function() {
 
       gEnter.append('g').attr('class', 'nv-x nv-axis');
       gEnter.append('g').attr('class', 'nv-y nv-axis');
-      gEnter.append('g').attr('class', 'nv-scatterWrap');
+      gEnter.append('svg').attr('class', 'nv-scatterWrap')
+        .attr('height', availableHeight);
       gEnter.append('g').attr('class', 'nv-distWrap');
       gEnter.append('g').attr('class', 'nv-legendWrap');
       gEnter.append('g').attr('class', 'nv-controlsWrap');
@@ -280,8 +281,11 @@ nv.models.scatterChart = function() {
             .color(data.map(function(d,i) {
               return d.color || color(d, i);
             }).filter(function(d,i) { return !data[i].disabled }));
-        gEnter.select('.nv-distWrap').append('g')
-            .attr('class', 'nv-distributionX');
+        gEnter.select('.nv-distWrap').append('svg')
+            .attr('width', availableWidth)
+            .attr('height', availableHeight + 8)
+            .append('g')
+            .attr('class', 'nv-distributionX')
         g.select('.nv-distributionX')
             .attr('transform', 'translate(0,' + y.range()[0] + ')')
             .datum(data.filter(function(d) { return !d.disabled }))
@@ -296,8 +300,11 @@ nv.models.scatterChart = function() {
             .color(data.map(function(d,i) {
               return d.color || color(d, i);
             }).filter(function(d,i) { return !data[i].disabled }));
-        gEnter.select('.nv-distWrap').append('g')
-            .attr('class', 'nv-distributionY');
+        gEnter.select('.nv-distWrap').append('svg')
+            // .attr('height', availableHeight)
+            // .attr('width', availableWidth)
+            // .append('g')
+            .attr('class', 'nv-distributionY')
         g.select('.nv-distributionY')
             .attr('transform', 'translate(-' + distY.size() + ',0)')
             .datum(data.filter(function(d) { return !d.disabled }))
@@ -346,6 +353,34 @@ nv.models.scatterChart = function() {
             .datum(data.filter(function(d) { return !d.disabled }))
             .call(distY);
       }
+
+      //------------------------------------------------------------
+      // cross line
+      var lineX = wrap.select('.nv-scatterWrap')
+        .append('line')
+        .attr('class', 'nv-cross-line nv-cross-line-X')
+        .attr('x1', 0)
+        .attr('x2', availableWidth)
+      var lineY = wrap.select('.nv-scatterWrap')
+        .append('line')
+        .attr('class', 'nv-cross-line nv-cross-line-Y')
+        .attr('y1', 0)
+        .attr('y2', availableHeight)
+
+      g.select('.nv-background')
+        .attr('width', availableWidth)
+        .attr('height', availableHeight)
+        .on('mousemove', function (d) {
+          var mouse = d3.mouse(this)
+          lineX.attr('y1', mouse[1]).attr('y2', mouse[1]).attr('x1', 0).attr('x2', availableWidth)
+          lineY.attr('x1', mouse[0]).attr('x2', mouse[0]).attr('y1', 0).attr('y2', availableHeight)
+        })
+        .on('mouseout', function (d) {
+          lineX.attr('y1', 0).attr('y2', 0).attr('x1', 0).attr('x2', 0)
+          lineY.attr('y1', 0).attr('y2', 0).attr('x1', 0).attr('x2', 0)
+        })
+
+
 
 
 
@@ -396,7 +431,7 @@ nv.models.scatterChart = function() {
           data.forEach(function(d) {
              d.disabled = true;
           });
-          d.disabled = false;  
+          d.disabled = false;
 
           state.disabled = data.map(function(d) { return !!d.disabled });
           dispatch.stateChange(state);
@@ -600,7 +635,7 @@ nv.models.scatterChart = function() {
     defaultState = _;
     return chart;
   };
-  
+
   chart.noData = function(_) {
     if (!arguments.length) return noData;
     noData = _;
