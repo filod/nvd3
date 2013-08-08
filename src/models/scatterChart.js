@@ -228,9 +228,9 @@ nv.models.scatterChart = function() {
           .xDomain(null)
           .yDomain(null)
 
-      wrap.select('.nv-scatterWrap')
-          .datum(data.filter(function(d) { return !d.disabled }))
-          .call(scatter);
+      // wrap.select('.nv-scatterWrap')
+      //     .datum(data.filter(function(d) { return !d.disabled }))
+      //     .call(scatter);
 
 
       //Adjust for x and y padding
@@ -356,12 +356,12 @@ nv.models.scatterChart = function() {
 
       //------------------------------------------------------------
       // cross line
-      var lineX = wrap.select('.nv-scatterWrap')
+      gEnter.select('.nv-scatterWrap')
         .append('line')
         .attr('class', 'nv-cross-line nv-cross-line-X')
         .attr('x1', 0)
         .attr('x2', availableWidth)
-      var lineY = wrap.select('.nv-scatterWrap')
+      gEnter.select('.nv-scatterWrap')
         .append('line')
         .attr('class', 'nv-cross-line nv-cross-line-Y')
         .attr('y1', 0)
@@ -372,12 +372,12 @@ nv.models.scatterChart = function() {
         .attr('height', availableHeight)
         .on('mousemove', function (d) {
           var mouse = d3.mouse(this)
-          lineX.attr('y1', mouse[1]).attr('y2', mouse[1]).attr('x1', 0).attr('x2', availableWidth)
-          lineY.attr('x1', mouse[0]).attr('x2', mouse[0]).attr('y1', 0).attr('y2', availableHeight)
+          g.select('.nv-cross-line-X').attr('y1', mouse[1]).attr('y2', mouse[1]).attr('x1', 0).attr('x2', availableWidth)
+          g.select('.nv-cross-line-Y').attr('x1', mouse[0]).attr('x2', mouse[0]).attr('y1', 0).attr('y2', availableHeight)
         })
         .on('mouseout', function (d) {
-          lineX.attr('y1', 0).attr('y2', 0).attr('x1', 0).attr('x2', 0)
-          lineY.attr('y1', 0).attr('y2', 0).attr('x1', 0).attr('x2', 0)
+          g.select('.nv-cross-line-X').attr('y1', 0).attr('y2', 0).attr('x1', 0).attr('x2', 0)
+          g.select('.nv-cross-line-Y').attr('y1', 0).attr('y2', 0).attr('x1', 0).attr('x2', 0)
         })
 
 
@@ -438,7 +438,51 @@ nv.models.scatterChart = function() {
           chart.update();
       });
 
+      //========================
+      // zoom behevior
+      //========================
+      function zoom () {
+        // var y = chart.yScale()
+        // var x = chart.xScale()
+        // var distX = chart.distX
+        // var distY = chart.distY
+        var w = scatter.width()
+        var h = scatter.height()
+        if (d3.event) {
+          var t = d3.event.translate
+          var s = d3.event.scale
+          t[0] = Math.min(100, Math.max(w * (1 - s) - 100, t[0]))
+          t[1] = Math.min(100, Math.max(h * (1 - s) - 100, t[1]))
+          zoomer.translate(t);
+        }
+        g.select('.nv-x.nv-axis')
+          .attr('transform', 'translate(0,' + y.range()[0] + ')')
+          .call(chart.xAxis);
+        g.select('.nv-y.nv-axis').call(chart.yAxis);
+        g.selectAll('circle.nv-point')
+          .attr('cx', function(d,i) { return x(scatter.x()(d,i)) })
+          .attr('cy', function(d,i) { return y(scatter.y()(d,i)) })
+        g.selectAll('text.nv-point-text')
+          // .transition()
+          .attr('x', function(d,i) { return x(scatter.x()(d,i)) - 20 })
+          .attr('y', function(d,i) { return y(scatter.y()(d,i)) - 8 })
+          .style('opacity', function () { return zoomer.scale() > 2 ? 1 : 0 })
+        g.select('.nv-distributionX')
+          .attr('transform', 'translate(0,' + y.range()[0] + ')')
+          .datum(data.filter(function(d) { return !d.disabled }))
+          .call(distX);
+        g.select('.nv-distributionY')
+          .attr('transform', 'translate(-' + distY.size() + ',0)')
+          .datum(data.filter(function(d) { return !d.disabled }))
+          .call(distY);
+        scatter.updateInteractiveLayer()
+      }
+      var zoomer = d3.behavior.zoom()
 
+      zoomer.x(x).y(y)
+        .scaleExtent([1, 10]).on('zoom', zoom)
+      wrap.call(zoomer)
+      chart.zoomer = zoomer
       /*
       legend.dispatch.on('legendMouseover', function(d, i) {
         d.hover = true;
@@ -485,7 +529,11 @@ nv.models.scatterChart = function() {
       //store old scales for use in transitions on update
       x0 = x.copy();
       y0 = y.copy();
-
+      chart.resetZoom = function () {
+        zoomer.scale(1)
+        zoomer.translate([0, 0])
+        zoom()
+      }
 
     });
 

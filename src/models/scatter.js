@@ -19,7 +19,7 @@ nv.models.scatter = function() {
     , getShape     = function(d) { return d.shape || 'circle' } // accessor to get point shape
     , getText     = function(d) { return d.id }
     , onlyCircles  = true // Set to false to use shapes
-    , withText  = false
+    , withText  = true
     , forceX       = [] // List of numbers to Force into the X scale (ie. 0, or a max / min, etc.)
     , forceY       = [] // List of numbers to Force into the Y scale
     , forceSize    = [] // List of numbers to Force into the Size scale
@@ -307,42 +307,44 @@ nv.models.scatter = function() {
               //.data(dataWithPoints)
               //.style('pointer-events', 'auto') // recativate events, disabled by css
               .on('click', function(d,i) {
+                console.log('click')
                 // nv.log('test', d, i);
                 if (needsUpdate || !data[d.series]) return 0; //check if this is a dummy point
                 var series = data[d.series],
-                    point  = series.values[i];
+                    point  = d;
 
                 dispatch.elementClick({
                   point: point,
                   series: series,
                   pos: [x(getX(point, i)) + margin.left, y(getY(point, i)) + margin.top],
                   seriesIndex: d.series,
-                  pointIndex: i
+                  pointIndex: d.uid
                 });
               })
               .on('mouseover', function(d,i) {
                 if (needsUpdate || !data[d.series]) return 0; //check if this is a dummy point
                 var series = data[d.series],
-                    point  = series.values[i];
+                    point  = d;
 
                 dispatch.elementMouseover({
                   point: point,
                   series: series,
                   pos: [x(getX(point, i)) + margin.left, y(getY(point, i)) + margin.top],
                   seriesIndex: d.series,
-                  pointIndex: i
+                  pointIndex: d.uid
                 });
               })
               .on('mouseout', function(d,i) {
+                console.log('mouseout')
                 if (needsUpdate || !data[d.series]) return 0; //check if this is a dummy point
                 var series = data[d.series],
-                    point  = series.values[i];
+                    point  = d;
 
                 dispatch.elementMouseout({
                   point: point,
                   series: series,
                   seriesIndex: d.series,
-                  pointIndex: i
+                  pointIndex: d.uid
                 });
               });
           }
@@ -380,14 +382,6 @@ nv.models.scatter = function() {
             .attr('cx', function(d,i) { return x0(getX(d,i)) })
             .attr('cy', function(d,i) { return y0(getY(d,i)) })
             .attr('r', function(d,i) { return Math.sqrt(z(getSize(d,i))/Math.PI) });
-        if (withText) {
-          points.enter().append('text')
-            .attr('class', 'nv-point-text')
-            .attr('x', function(d,i) { return x0(getX(d,i)) })
-            .attr('y', function(d,i) { return y0(getY(d,i)) })
-            // .style('opacity', 0)
-            .text(getText)
-        }
         points.exit().remove();
         groups.exit().selectAll('path.nv-point').transition()
             .attr('cx', function(d,i) { return x(getX(d,i)) })
@@ -396,14 +390,23 @@ nv.models.scatter = function() {
         points.each(function(d,i) {
           d3.select(this)
             .classed('nv-point', true)
-            .classed('nv-point-' + i, true)
-            .classed('nv-point-uid-' + d.uid, true);
+            .classed('nv-point-' + d.uid, true)
         });
         points.transition()
             .attr('cx', function(d,i) { return x(getX(d,i)) })
             .attr('cy', function(d,i) { return y(getY(d,i)) })
             .attr('r', function(d,i) { return Math.sqrt(z(getSize(d,i))/Math.PI) });
-
+        if (withText) {
+          var texts = groups.selectAll('text.nv-point-text')
+            .data(function(d) { return d.values }, pointKey);
+          texts.enter().append('text')
+          .attr('class', 'nv-point-text')
+          .attr('x', function(d,i) { return x(getX(d,i)) - 25 })
+          .attr('y', function(d,i) { return y(getY(d,i)) - 5 })
+          .style('opacity', 0)
+          .text(getText)
+          texts.exit().remove();
+        }
       } else {
 
         var points = groups.selectAll('path.nv-point')

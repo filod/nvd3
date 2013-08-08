@@ -68,13 +68,14 @@ nv.models.distribution = function() {
       dist.enter().append('line')
           .attr(axis + '1', function(d,i) { return scale0(getData(d,i)) })
           .attr(axis + '2', function(d,i) { return scale0(getData(d,i)) })
+      dist.exit().remove()
       d3.transition(distWrap.exit().selectAll('line.nv-dist' + axis))
           .attr(axis + '1', function(d,i) { return scale(getData(d,i)) })
           .attr(axis + '2', function(d,i) { return scale(getData(d,i)) })
           .style('stroke-opacity', 0)
           .remove();
       dist
-          .attr('class', function(d,i) { return 'nv-dist' + axis + ' nv-dist' + axis + '-' + i })
+          .attr('class', function(d,i) { return 'nv-dist' + axis + ' nv-dist' + axis + '-' + d.uid })
           .attr(naxis + '1', 0)
           .attr(naxis + '2', size);
       d3.transition(dist)
