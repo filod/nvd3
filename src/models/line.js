@@ -19,14 +19,14 @@ nv.models.line = function() {
     , clipEdge = false // if true, masks lines within x and y scale
     , x //can be accessed via chart.xScale()
     , y //can be accessed via chart.yScale()
-    , interpolate = "linear" // controls the line interpolation
+    , interpolate = "monotone" // controls the line interpolation
     ;
 
   scatter
     .size(16) // default size
     .sizeDomain([16,256]) //set to speed up calculation, needs to be unset if there is a custom size accessor
     ;
-    
+
   //============================================================
 
 
