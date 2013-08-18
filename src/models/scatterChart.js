@@ -179,10 +179,10 @@ nv.models.scatterChart = function() {
       gEnter.append('g').attr('class', 'nv-x nv-axis');
       gEnter.append('g').attr('class', 'nv-y nv-axis');
       gEnter.append('svg').attr('class', 'nv-lineWrap')
-        .attr('width', availableWidth)
-        .attr('height', availableHeight)
+        // .attr('width', availableWidth)
+        // .attr('height', availableHeight)
       gEnter.append('svg').attr('class', 'nv-scatterWrap')
-        .attr('height', availableHeight);
+        // .attr('height', availableHeight);
       gEnter.append('g').attr('class', 'nv-distWrap');
       gEnter.append('g').attr('class', 'nv-legendWrap');
       gEnter.append('g').attr('class', 'nv-controlsWrap');
@@ -244,9 +244,6 @@ nv.models.scatterChart = function() {
           .xDomain(null)
           .yDomain(null)
 
-      // wrap.select('.nv-scatterWrap')
-      //     .datum(data.filter(function(d) { return !d.disabled }))
-      //     .call(scatter);
 
 
       //Adjust for x and y padding
@@ -261,8 +258,10 @@ nv.models.scatterChart = function() {
       }
 
       wrap.select('.nv-scatterWrap')
-          .datum(data.filter(function(d) { return !d.disabled }))
-          .call(scatter);
+        .attr('width', availableWidth)
+        .attr('height', availableHeight)
+        .datum(data.filter(function(d) { return !d.disabled }))
+        .call(scatter);
 
 
 
@@ -402,35 +401,38 @@ nv.models.scatterChart = function() {
       var getX = function(d) { return d.x }, getY = function(d) { return d.y }
 
       var linePaths = g.select('.nv-lineWrap').selectAll('path.nv-line')
-          .data([ldata]);
+        .attr('width', availableWidth)
+        .attr('height', availableHeight)
+        .data([ldata]);
       linePaths.enter().append('path')
           .attr('class', 'nv-line')
+      // linePaths
           .attr('d',
             d3.svg.line()
               .interpolate('linear')
               // .defined(defined)
-              .x(function(d,i) { return x0(getX(d,i)) })
-              .y(function(d,i) { return y0(getY(d,i)) })
+              .x(function(d,i) { return x(getX(d,i)) })
+              .y(function(d,i) { return y(getY(d,i)) })
           );
       linePaths.exit().selectAll('path.nv-line')
           .remove()
 
-      // d3.transition(groups.exit().selectAll('path.nv-line'))
-      //     .attr('d',
-      //       d3.svg.line()
-      //         .interpolate(interpolate)
-      //         .defined(defined)
-      //         .x(function(d,i) { return x(getX(d,i)) })
-      //         .y(function(d,i) { return y(getY(d,i)) })
-      //     );
-      // d3.transition(linePaths)
-      //     .attr('d',
-      //       d3.svg.line()
-      //         .interpolate(interpolate)
-      //         .defined(defined)
-      //         .x(function(d,i) { return x(getX(d,i)) })
-      //         .y(function(d,i) { return y(getY(d,i)) })
-      //     );
+      d3.transition(linePaths.exit().selectAll('path.nv-line'))
+          .attr('d',
+            d3.svg.line()
+              .interpolate('linear')
+              // .defined(defined)
+              .x(function(d,i) { return x(getX(d,i)) })
+              .y(function(d,i) { return y(getY(d,i)) })
+          );
+      d3.transition(linePaths)
+          .attr('d',
+            d3.svg.line()
+              .interpolate('linear')
+              // .defined(defined)
+              .x(function(d,i) { return x(getX(d,i)) })
+              .y(function(d,i) { return y(getY(d,i)) })
+          );
 
       //============================================================
       // Event Handling/Dispatching (in chart's scope)
@@ -535,7 +537,6 @@ nv.models.scatterChart = function() {
           .transition().duration(duration)
           .attr('d',
             d3.svg.line()
-              // .interpolate('linear')
               .x(function(d,i) { return x(getX(d,i)) })
               .y(function(d,i) { return y(getY(d,i)) }))
         scatter.updateInteractiveLayer()

@@ -376,11 +376,12 @@ nv.models.scatter = function() {
           var texts = groups.selectAll('text.nv-point-text')
             .data(function(d) { return d.values }, pointKey);
           texts.enter().append('text')
-          .attr('class', 'nv-point-text')
-          .attr('x', function(d,i) { return x(getX(d,i)) - 20 })
-          .attr('y', function(d,i) { return y(getY(d,i)) - 10 })
-          .style('opacity', 0)
-          .text(getText)
+            .attr('class', 'nv-point-text');
+          texts
+            .attr('x', function(d,i) { return x(getX(d,i)) - 20 })
+            .attr('y', function(d,i) { return y(getY(d,i)) - 10 })
+            .style('opacity', 0)
+            .text(getText)
           texts.exit().remove();
         }
         var points = groups.selectAll('circle.nv-point')
