@@ -6,6 +6,7 @@ nv.models.scatterChart = function() {
   //------------------------------------------------------------
 
   var scatter      = nv.models.scatter()
+    , scatterX     = nv.models.scatter()
     , xAxis        = nv.models.axis()
     , yAxis        = nv.models.axis()
     , legend       = nv.models.legend()
@@ -27,6 +28,7 @@ nv.models.scatterChart = function() {
     , showLegend   = true
     , showControls = !!d3.fisheye
     , fisheye      = 0
+    , brushHeight  = 30
     , pauseFisheye = false
     , tooltips     = true
     , tooltipX     = function(key, x, y) { return '<strong>' + x + '</strong>' }
@@ -35,7 +37,7 @@ nv.models.scatterChart = function() {
     // , tooltip      = null
     , state = {}
     , defaultState = null
-    , dispatch     = d3.dispatch('tooltipShow', 'tooltipHide', 'stateChange', 'changeState')
+    , dispatch     = d3.dispatch('tooltipShow', 'tooltipHide', 'stateChange', 'changeState', 'brushend')
     , noData       = "No Data Available."
     ;
 
@@ -43,9 +45,8 @@ nv.models.scatterChart = function() {
     .xScale(x)
     .yScale(y)
     ;
-  // lines
-  //   .xScale(x)
-  //   .yScale(y)
+  scatterX
+    .xScale(x)
   xAxis
     .orient('bottom')
     .tickPadding(10)
@@ -101,13 +102,14 @@ nv.models.scatterChart = function() {
     selection.each(function(obj) {
       data = obj.dots
       ldata = obj.lines
+      xDots = obj.xDots
       var container = d3.select(this),
           that = this;
 
       var availableWidth = (width  || parseInt(container.style('width')) || 960)
                              - margin.left - margin.right,
           availableHeight = (height || parseInt(container.style('height')) || 400)
-                             - margin.top - margin.bottom;
+                             - margin.top - margin.bottom - brushHeight;
 
       chart.update = function() {
         console.log('update')
@@ -178,18 +180,11 @@ nv.models.scatterChart = function() {
 
       gEnter.append('g').attr('class', 'nv-x nv-axis');
       gEnter.append('g').attr('class', 'nv-y nv-axis');
-      gEnter.append('svg').attr('class', 'nv-lineWrap')
-        // .attr('width', availableWidth)
-        // .attr('height', availableHeight)
       gEnter.append('svg').attr('class', 'nv-scatterWrap')
-        // .attr('height', availableHeight);
+      gEnter.select('.nv-scatterWrap').append('svg').attr('class', 'nv-lineWrap')
       gEnter.append('g').attr('class', 'nv-distWrap');
       gEnter.append('g').attr('class', 'nv-legendWrap');
       gEnter.append('g').attr('class', 'nv-controlsWrap');
-
-
-
-      //------------------------------------------------------------
 
 
       //------------------------------------------------------------
@@ -262,7 +257,6 @@ nv.models.scatterChart = function() {
         .attr('height', availableHeight)
         .datum(data.filter(function(d) { return !d.disabled }))
         .call(scatter);
-
 
 
       //------------------------------------------------------------
@@ -396,6 +390,37 @@ nv.models.scatterChart = function() {
 
 
 
+
+      //------------------------------------------------------------
+      // brush!
+      var brushWrap = container.selectAll('.nv-burshWrap').data([xDots])
+      gBrush = brushWrap.enter().append('g').attr('class', 'nv-burshWrap')
+      gBrush
+        .attr('transform', 'translate(' + margin.left + ',' + (availableHeight + margin.top + brushHeight) +')')
+      scatterX
+          .width(availableWidth)
+          .height(brushHeight)
+          .color(xDots.map(function(d,i) {
+            return d.color || color(d, i);
+          }))
+          .xDomain(x.domain())
+      gBrush
+        .datum(xDots)
+        .call(scatterX);
+      var brush = d3.svg.brush()
+        .x(x)
+        .on("brushend", brushed);
+      gBrush.append('g')
+        .attr("class", "x brush")
+        .call(brush)
+      .selectAll("rect")
+        .attr("y", -6)
+        .attr("height", brushHeight);
+      function brushed () {
+        dispatch.brushend('brushed', brush)
+      }
+
+
       //------------------------------------------------------------
       // setup lines
       var getX = function(d) { return d.x }, getY = function(d) { return d.y }
@@ -493,12 +518,7 @@ nv.models.scatterChart = function() {
       //========================
 
       function updateScale (duration) {
-        console.log('updateScale')
         duration = duration || 0
-        // var y = chart.yScale()
-        // var x = chart.xScale()
-        // var distX = chart.distX
-        // var distY = chart.distY
         if (d3.event && d3.event.translate && d3.event.scale) {
           var w = scatter.width()
           var h = scatter.height()
@@ -545,7 +565,8 @@ nv.models.scatterChart = function() {
       var zoomer = d3.behavior.zoom()
 
       zoomer.x(x).y(y)
-        .scaleExtent([1, 10]).on('zoom', updateScale)
+        .scaleExtent([1, 4]).on('zoom', _.throttle(updateScale, 30, { trailing: false }))
+        // .scaleExtent([1, 4]).on('zoom', updateScale)
       wrap.call(zoomer)
       /*
       legend.dispatch.on('legendMouseover', function(d, i) {
@@ -558,6 +579,7 @@ nv.models.scatterChart = function() {
         chart(selection);
       });
       */
+
 
       scatter.dispatch.on('elementMouseover.tooltip', function(e) {
         d3.select('.nv-chart-' + scatter.id() + ' .nv-series-' + e.seriesIndex + ' .nv-distx-' + e.pointIndex)
@@ -593,10 +615,10 @@ nv.models.scatterChart = function() {
       //store old scales for use in transitions on update
       x0 = x.copy();
       y0 = y.copy();
-      chart.resetZoom = function () {
+      chart.resetZoom = function (duration) {
         zoomer.scale(1)
         zoomer.translate([0, 0])
-        zoom()
+        updateScale(duration)
       }
 
     });
@@ -617,8 +639,14 @@ nv.models.scatterChart = function() {
     d3.select('.nv-chart-' + scatter.id() + ' .nv-series-' + e.seriesIndex + ' .nv-disty-' + e.pointIndex)
         .attr('x2', distY.size());
   });
-  dispatch.on('tooltipHide', function() {
-    if (tooltips) nv.tooltip.cleanup();
+
+  // scatter.dispatch.on('canvasClick.tooltip', function (e) {
+  //   nv.tooltip.cleanup();
+  // });
+  dispatch.on('tooltipHide', function(e) {
+    if (tooltips) {
+      nv.tooltip.cleanup();
+    }
   });
 
   //============================================================
