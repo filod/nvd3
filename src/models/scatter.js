@@ -501,6 +501,12 @@ nv.models.scatter = function() {
     return chart;
   };
 
+  chart.text = function(_) {
+    if (!arguments.length) return getText;
+    getText = d3.functor(_);
+    return chart;
+  };
+
   chart.margin = function(_) {
     if (!arguments.length) return margin;
     margin.top    = typeof _.top    != 'undefined' ? _.top    : margin.top;

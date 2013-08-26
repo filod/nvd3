@@ -423,7 +423,7 @@ nv.models.scatterChart = function() {
 
       //------------------------------------------------------------
       // setup lines
-      var getX = function(d) { return d.x }, getY = function(d) { return d.y }
+      var getX = scatter.x(), getY = scatter.y()
 
       var linePaths = g.select('.nv-lineWrap').selectAll('path.nv-line')
         .attr('width', availableWidth)
@@ -666,7 +666,7 @@ nv.models.scatterChart = function() {
   chart.distX = distX;
   chart.distY = distY;
 
-  d3.rebind(chart, scatter, 'id', 'interactive', 'pointActive', 'x', 'y', 'shape', 'size', 'xScale', 'yScale', 'zScale', 'xDomain', 'yDomain', 'sizeDomain', 'sizeRange', 'forceX', 'forceY', 'forceSize', 'clipVoronoi', 'clipRadius', 'useVoronoi');
+  d3.rebind(chart, scatter, 'id', 'interactive', 'pointActive', 'x', 'y', 'shape', 'size', 'text', 'xScale', 'yScale', 'zScale', 'xDomain', 'yDomain', 'sizeDomain', 'sizeRange', 'forceX', 'forceY', 'forceSize', 'clipVoronoi', 'clipRadius', 'useVoronoi');
 
   chart.margin = function(_) {
     if (!arguments.length) return margin;
