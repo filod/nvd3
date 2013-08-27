@@ -84,4 +84,5 @@ module.exports = function(grunt) {
     grunt.registerTask('default', ['concat']);
     grunt.registerTask('production', ['concat', 'uglify']);
     grunt.registerTask('lint', ['jshint']);
+    grunt.loadNpmTasks('grunt-bump');
 };
