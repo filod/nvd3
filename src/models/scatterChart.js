@@ -112,7 +112,6 @@ nv.models.scatterChart = function() {
                              - margin.top - margin.bottom - brushHeight;
 
       chart.update = function() {
-        console.log('update')
         container.transition().call(chart);
       };
       chart.updateScale = updateScale
