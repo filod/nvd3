@@ -1,6 +1,6 @@
 
 nv.models.distribution = function() {
-
+  "use strict";
   //============================================================
   // Public Variables with Default Settings
   //------------------------------------------------------------
@@ -69,7 +69,8 @@ nv.models.distribution = function() {
           .attr(axis + '1', function(d,i) { return scale0(getData(d,i)) })
           .attr(axis + '2', function(d,i) { return scale0(getData(d,i)) })
       dist.exit().remove()
-      d3.transition(distWrap.exit().selectAll('line.nv-dist' + axis))
+      distWrap.exit().selectAll('line.nv-dist' + axis)
+          .transition()
           .attr(axis + '1', function(d,i) { return scale(getData(d,i)) })
           .attr(axis + '2', function(d,i) { return scale(getData(d,i)) })
           .style('stroke-opacity', 0)
@@ -78,7 +79,8 @@ nv.models.distribution = function() {
           .attr('class', function(d,i) { return 'nv-dist' + axis + ' nv-dist' + axis + '-' + d.uid })
           .attr(naxis + '1', 0)
           .attr(naxis + '2', size);
-      d3.transition(dist)
+      dist
+          .transition()
           .attr(axis + '1', function(d,i) { return scale(getData(d,i)) })
           .attr(axis + '2', function(d,i) { return scale(getData(d,i)) })
 
@@ -94,6 +96,7 @@ nv.models.distribution = function() {
   //============================================================
   // Expose Public Variables
   //------------------------------------------------------------
+  chart.options = nv.utils.optionsFunc.bind(chart);
 
   chart.margin = function(_) {
     if (!arguments.length) return margin;
@@ -139,7 +142,6 @@ nv.models.distribution = function() {
     color = nv.utils.getColor(_);
     return chart;
   };
-
   //============================================================
 
 
