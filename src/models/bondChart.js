@@ -427,9 +427,9 @@ nv.models.scatterChart = function() {
           }))
           .xDomain(x.domain())
           .x(scatter.x())
-          .y(function (d) {
-            return availableHeight
-          })
+          // .y(function (d) {
+          //   return availableHeight
+          // })
 
       var brush = d3.svg.brush()
         .x(x)
