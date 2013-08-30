@@ -468,7 +468,9 @@ nv.models.scatterChart = function() {
       var linePaths = g.select('.nv-lineWrap').selectAll('path.nv-line')
         .attr('width', availableWidth)
         .attr('height', availableHeight)
-        .data([ldata]);
+        .data(ldata.map(function (d) {
+          return d.Dots
+        }));
       linePaths.enter().append('path')
           .attr('class', 'nv-line')
           .attr('d',
@@ -588,7 +590,7 @@ nv.models.scatterChart = function() {
       var zoomer = d3.behavior.zoom()
 
       zoomer.x(x).y(y)
-        .scaleExtent([1, 4]).on('zoom', _.throttle(updateScale, 30, { trailing: false }))
+        .scaleExtent([1, 12]).on('zoom', _.throttle(updateScale, 30, { trailing: false }))
         // .scaleExtent([1, 4]).on('zoom', updateScale)
       wrap.call(zoomer)
       /*
