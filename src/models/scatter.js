@@ -38,7 +38,7 @@ nv.models.scatter = function() {
     , sizeDomain   = null // Override point size domain
     , sizeRange    = null
     , singlePoint  = false
-    , dispatch     = d3.dispatch('elementClick', 'elementMouseover', 'elementMouseout', 'canvasClick')
+    , dispatch     = d3.dispatch('elementClick', 'elementMouseover', 'elementMouseout')
     , useVoronoi   = false
     ;
 
@@ -140,9 +140,6 @@ nv.models.scatter = function() {
       gEnter.append('g').attr('class', 'nv-point-paths');
 
       wrap.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
-      d3.select('.nv-background').on('click', function (d) {
-          dispatch.canvasClick()
-        })
 
       //------------------------------------------------------------
 

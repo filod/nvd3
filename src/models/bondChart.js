@@ -38,7 +38,7 @@ nv.models.scatterChart = function() {
     , tooltip      = function(key, x, y) { return '<h3>' + key + '</h3>' }
     , state = {}
     , defaultState = null
-    , dispatch     = d3.dispatch('tooltipShow', 'tooltipHide', 'stateChange', 'changeState', 'brushend')
+    , dispatch     = d3.dispatch('tooltipShow', 'tooltipHide', 'stateChange', 'changeState', 'brushend', 'canvasClick')
     , noData       = "No Data Available."
     , transitionDuration = 250
     ;
@@ -104,9 +104,9 @@ nv.models.scatterChart = function() {
 
   function chart(selection) {
     selection.each(function(obj) {
-      data = obj.dots
-      ldata = obj.lines
-      xDots = obj.xDots
+      var data = obj.dots
+      var ldata = obj.lines
+      var xDots = obj.xDots
       var container = d3.select(this),
           that = this;
 
@@ -248,7 +248,9 @@ nv.models.scatterChart = function() {
       if (yPadding !== 0)
         scatter.yDomain(null);
 
-
+      wrap.select('.nv-scatterWrap')
+       .datum(data.filter(function(d) { return !d.disabled }))
+       .call(scatter);
       //Adjust for x and y padding
       if (xPadding !== 0) {
         var xRange = x.domain()[1] - x.domain()[0];
@@ -262,8 +264,6 @@ nv.models.scatterChart = function() {
 
       if (yPadding !== 0 || xPadding !== 0) {
         wrap.select('.nv-scatterWrap')
-          .attr('width', availableWidth)
-          .attr('height', availableHeight)
           .datum(data.filter(function(d) { return !d.disabled }))
           .call(scatter);
       }
@@ -411,7 +411,12 @@ nv.models.scatterChart = function() {
       //------------------------------------------------------------
       // brush!
       var brushWrap = container.selectAll('.nv-burshWrap').data([xDots])
-      gBrush = brushWrap.enter().append('g').attr('class', 'nv-burshWrap')
+      var brushWrapEnter = brushWrap.enter().append('g').attr('class', 'nv-burshWrap')
+      var brushEnter = brushWrapEnter.append('g')
+      var gBrush = brushWrap.select('g')
+
+      gEnter.append('svg').attr('class', 'nv-scatterWrap')
+
       gBrush
         .attr('transform', 'translate(' + margin.left + ',' + (availableHeight + margin.top + brushHeight) +')')
       scatterX
@@ -421,23 +426,41 @@ nv.models.scatterChart = function() {
             return d.color || color(d, i);
           }))
           .xDomain(x.domain())
-      gBrush
-        .datum(xDots)
-        .call(scatterX);
+          .x(scatter.x())
+          .y(function (d) {
+            return availableHeight
+          })
+
       var brush = d3.svg.brush()
         .x(x)
         .on("brushend", brushed);
-      gBrush.append('g')
+      brushEnter.append('g')
         .attr("class", "x brush")
         .call(brush)
-      .selectAll("rect")
-        .attr("y", -6)
+
+      gBrush//.select('.nv-scatterWrap')
+        .datum(xDots)
+        .call(scatterX);
+      gBrush.selectAll("rect")
+        .attr("y", -10)
         .attr("height", brushHeight);
       function brushed () {
         dispatch.brushend('brushed', brush)
       }
 
 
+      scatterX.dispatch.on('elementMouseover.tooltip', function(e) {
+        e.pos = [e.pos[0] + margin.left, e.pos[1] + margin.top];
+        if (tooltips) showTooltip(e, that.parentNode);
+      });
+
+      scatterX.dispatch.on('elementMouseout.tooltip', function(e) {
+        nv.tooltip.cleanup();
+        // d3.select('.nv-chart-' + scatter.id() + ' .nv-series-' + e.seriesIndex + ' .nv-distx-' + e.pointIndex)
+        //     .attr('y1', 0);
+        // d3.select('.nv-chart-' + scatter.id() + ' .nv-series-' + e.seriesIndex + ' .nv-disty-' + e.pointIndex)
+        //     .attr('x2', distY.size());
+      });
       //------------------------------------------------------------
       // setup lines
       var getX = scatter.x(), getY = scatter.y()
@@ -448,7 +471,6 @@ nv.models.scatterChart = function() {
         .data([ldata]);
       linePaths.enter().append('path')
           .attr('class', 'nv-line')
-      // linePaths
           .attr('d',
             d3.svg.line()
               .interpolate('linear')
@@ -534,10 +556,17 @@ nv.models.scatterChart = function() {
           .transition().duration(duration)
           .attr('cx', function(d,i) { return x(scatter.x()(d,i)) })
           .attr('cy', function(d,i) { return y(scatter.y()(d,i)) })
+        gBrush.selectAll('circle.nv-point')
+          .transition().duration(duration)
+          .attr('cx', function(d,i) { return x(scatter.x()(d,i)) })
         g.selectAll('text.nv-point-text')
           .transition().duration(duration)
           .attr('x', function(d,i) { return x(scatter.x()(d,i)) - 20 })
           .attr('y', function(d,i) { return y(scatter.y()(d,i)) - 10 })
+          .style('opacity', function () { return zoomer.scale() > 2 ? 1 : 0 })
+        gBrush.selectAll('text.nv-point-text')
+          .transition().duration(duration)
+          .attr('x', function(d,i) { return x(scatter.x()(d,i)) - 20 })
           .style('opacity', function () { return zoomer.scale() > 2 ? 1 : 0 })
         g.select('.nv-distributionX')
           .attr('transform', 'translate(0,' + y.range()[0] + ')')
@@ -574,6 +603,9 @@ nv.models.scatterChart = function() {
       });
       */
 
+      g.select('.nv-background').on('click', function (d) {
+        dispatch.canvasClick()
+      })
       scatter.dispatch.on('elementMouseover.tooltip', function(e) {
         d3.select('.nv-chart-' + scatter.id() + ' .nv-series-' + e.seriesIndex + ' .nv-distx-' + e.pointIndex)
             .attr('y1', function(d,i) { return e.pos[1] - availableHeight;});
@@ -633,9 +665,6 @@ nv.models.scatterChart = function() {
         .attr('x2', distY.size());
   });
 
-  // scatter.dispatch.on('canvasClick.tooltip', function (e) {
-  //   nv.tooltip.cleanup();
-  // });
   dispatch.on('tooltipHide', function(e) {
     if (tooltips) {
       nv.tooltip.cleanup();
@@ -652,6 +681,7 @@ nv.models.scatterChart = function() {
   // expose chart's sub-components
   chart.dispatch = dispatch;
   chart.scatter = scatter;
+  chart.scatterX = scatterX;
   chart.legend = legend;
   chart.controls = controls;
   chart.xAxis = xAxis;
