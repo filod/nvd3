@@ -105,7 +105,8 @@ nv.models.scatterChart = function() {
   function chart(selection) {
     selection.each(function(obj) {
       var data = obj.dots
-      var ldata = obj.lines
+      var lines = []//obj.lines TODO:
+      var dLines =[]// obj.dLines
       var xDots = obj.xDots
       var container = d3.select(this),
           that = this;
@@ -465,37 +466,49 @@ nv.models.scatterChart = function() {
       // setup lines
       var getX = scatter.x(), getY = scatter.y()
 
-      var linePaths = g.select('.nv-lineWrap').selectAll('path.nv-line')
-        .attr('width', availableWidth)
-        .attr('height', availableHeight)
-        .data(ldata.map(function (d) {
+      var linePaths = g.select('.nv-lineWrap').selectAll('path.nv-line-static')
+        .data(lines.map(function (d) {
           return d.Dots
         }));
-      linePaths.enter().append('path')
-          .attr('class', 'nv-line')
-          .attr('d',
-            d3.svg.line()
-              .interpolate('linear')
-              // .defined(defined)
-              .x(function(d,i) { return x(getX(d,i)) })
-              .y(function(d,i) { return y(getY(d,i)) })
-          );
-      linePaths.exit().selectAll('path.nv-line')
-          .remove()
+      var dLinePaths = g.select('.nv-lineWrap').selectAll('path.nv-line-dynamic')
+        .data(dLines.map(function (d) {
+          return d.Dots
+        }))
 
-      d3.transition(linePaths.exit().selectAll('path.nv-line'))
+      linePaths.enter().append('path')
+          .attr('class', 'nv-line nv-line-static')
           .attr('d',
             d3.svg.line()
               .interpolate('linear')
-              // .defined(defined)
               .x(function(d,i) { return x(getX(d,i)) })
               .y(function(d,i) { return y(getY(d,i)) })
           );
-      d3.transition(linePaths)
+      linePaths.exit().selectAll('path.nv-line-static')
+          .remove()
+      linePaths
+          .transition()
           .attr('d',
             d3.svg.line()
               .interpolate('linear')
-              // .defined(defined)
+              .x(function(d,i) { return x(getX(d,i)) })
+              .y(function(d,i) { return y(getY(d,i)) })
+          );
+
+      dLinePaths.enter().append('path')
+          .attr('class', 'nv-line nv-line-dynamic')
+          .attr('d',
+            d3.svg.line()
+              .interpolate('linear')
+              .x(function(d,i) { return x(getX(d,i)) })
+              .y(function(d,i) { return y(getY(d,i)) })
+          );
+      dLinePaths.exit().selectAll('path.nv-line-dynamic')
+          .remove()
+      dLinePaths
+          .transition()
+          .attr('d',
+            d3.svg.line()
+              .interpolate('linear')
               .x(function(d,i) { return x(getX(d,i)) })
               .y(function(d,i) { return y(getY(d,i)) })
           );
