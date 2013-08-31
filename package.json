@@ -1,6 +1,6 @@
 {
   "name": "nvd3",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "devDependencies": {
     "grunt": "~0.4.1",
     "grunt-bump": "~0.0.11",
