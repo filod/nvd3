@@ -336,50 +336,6 @@ nv.models.scatterChart = function() {
       //------------------------------------------------------------
 
 
-
-
-      if (d3.fisheye) {
-        g.select('.nv-background')
-            .attr('width', availableWidth)
-            .attr('height', availableHeight);
-
-        g.select('.nv-background').on('mousemove', updateFisheye);
-        g.select('.nv-background').on('click', function() { pauseFisheye = !pauseFisheye;});
-        scatter.dispatch.on('elementClick.freezeFisheye', function() {
-          pauseFisheye = !pauseFisheye;
-        });
-      }
-
-
-      function updateFisheye() {
-        if (pauseFisheye) {
-          g.select('.nv-point-paths').style('pointer-events', 'all');
-          return false;
-        }
-
-        g.select('.nv-point-paths').style('pointer-events', 'none' );
-
-        var mouse = d3.mouse(this);
-        x.distortion(fisheye).focus(mouse[0]);
-        y.distortion(fisheye).focus(mouse[1]);
-
-        g.select('.nv-scatterWrap')
-            .call(scatter);
-
-        if (showXAxis)
-          g.select('.nv-x.nv-axis').call(xAxis);
-
-        if (showYAxis)
-          g.select('.nv-y.nv-axis').call(yAxis);
-
-        g.select('.nv-distributionX')
-            .datum(data.filter(function(d) { return !d.disabled }))
-            .call(distX);
-        g.select('.nv-distributionY')
-            .datum(data.filter(function(d) { return !d.disabled }))
-            .call(distY);
-      }
-
       //------------------------------------------------------------
       // cross line
       // gEnter.select('.')
@@ -547,26 +503,8 @@ nv.models.scatterChart = function() {
       //========================
       // zoom behevior
       //========================
-
-      function updateScale (duration) {
-        duration = duration || 0
-        if (d3.event && d3.event.translate && d3.event.scale) {
-          var w = scatter.width()
-          var h = scatter.height()
-          var t = d3.event.translate
-          var s = d3.event.scale
-          t[0] = Math.min(100 * s, Math.max(w * (1 - s) - 100 * s, t[0]))
-          t[1] = Math.min(100 * s, Math.max(h * (1 - s) - 100 * s, t[1]))
-          zoomer.translate(t);
-        }
-        if (!g) return
-        g.select('.nv-x.nv-axis')
-          .transition().duration(duration)
-          .attr('transform', 'translate(0,' + y.range()[0] + ')')
-          .call(chart.xAxis);
-        g.select('.nv-y.nv-axis')
-          .transition().duration(duration)
-          .call(chart.yAxis);
+      var redraw = _.debounce(function () {
+        var duration = 250
         g.selectAll('circle.nv-point')
           .transition().duration(duration)
           .attr('cx', function(d,i) { return x(scatter.x()(d,i)) })
@@ -591,6 +529,36 @@ nv.models.scatterChart = function() {
           .attr('transform', 'translate(-' + distY.size() + ',0)')
           .datum(data.filter(function(d) { return !d.disabled }))
           .call(distY);
+
+      }, 20)
+
+      function updateScale (duration) {
+
+        // g.select('.nv-scatterWrap').attr("transform",
+        //     "translate("+d3.event.translate+")"
+        //     + " scale("+d3.event.scale+")");
+        // return
+        duration = duration || 0
+        if (d3.event && d3.event.translate && d3.event.scale) {
+          var w = scatter.width()
+          var h = scatter.height()
+          var t = d3.event.translate
+          var s = d3.event.scale
+          t[0] = Math.min(100 * s, Math.max(w * (1 - s) - 100 * s, t[0]))
+          t[1] = Math.min(100 * s, Math.max(h * (1 - s) - 100 * s, t[1]))
+          zoomer.translate(t);
+        }
+        if (!g) return
+        g.select('.nv-x.nv-axis')
+          .transition().duration(duration)
+          .attr('transform', 'translate(0,' + y.range()[0] + ')')
+          .call(chart.xAxis);
+        g.select('.nv-y.nv-axis')
+          .transition().duration(duration)
+          .call(chart.yAxis);
+
+        redraw()
+
         g.select('.nv-lineWrap').selectAll('path.nv-line')
           .transition().duration(duration)
           .attr('d',
@@ -603,7 +571,7 @@ nv.models.scatterChart = function() {
       var zoomer = d3.behavior.zoom()
 
       zoomer.x(x).y(y)
-        .scaleExtent([1, 12]).on('zoom', _.throttle(updateScale, 30, { trailing: false }))
+        .scaleExtent([1, 12]).on('zoom', _.throttle(updateScale, 100, { trailing: false }))
         // .scaleExtent([1, 4]).on('zoom', updateScale)
       wrap.call(zoomer)
       /*
