@@ -181,13 +181,17 @@ nv.models.scatterChart = function() {
 
       gEnter.append('g').attr('class', 'nv-x nv-axis');
       gEnter.append('g').attr('class', 'nv-y nv-axis');
-      gEnter.append('svg').attr('class', 'nv-scatterWrap')
-      gEnter.select('.nv-scatterWrap').append('svg').attr('class', 'nv-lineWrap')
+      gEnter.append('svg')
+        .attr('class', 'nv-main-area')
+        .append('g').attr('class', 'nv-scatterWrap')
+      gEnter.select('.nv-scatterWrap').append('g').attr('class', 'nv-lineWrap')
       gEnter.append('g').attr('class', 'nv-distWrap');
       gEnter.append('g').attr('class', 'nv-legendWrap');
       gEnter.append('g').attr('class', 'nv-controlsWrap');
 
-
+      g.select('.nv-main-area')
+        .attr('width', availableWidth)
+        .attr('height', availableHeight)
       //------------------------------------------------------------
       // Legend
 
@@ -302,10 +306,10 @@ nv.models.scatterChart = function() {
             .color(data.map(function(d,i) {
               return d.color || color(d, i);
             }).filter(function(d,i) { return !data[i].disabled }));
-        gEnter.select('.nv-distWrap').append('svg')
-            .attr('width', availableWidth)
-            .attr('height', availableHeight + 8)
-            .append('g')
+        gEnter.select('.nv-distWrap').append('g')
+            // .attr('width', availableWidth)
+            // .attr('height', availableHeight + 8)
+            // .append('g')
             .attr('class', 'nv-distributionX')
         g.select('.nv-distributionX')
             .attr('transform', 'translate(0,' + y.range()[0] + ')')
@@ -321,7 +325,7 @@ nv.models.scatterChart = function() {
             .color(data.map(function(d,i) {
               return d.color || color(d, i);
             }).filter(function(d,i) { return !data[i].disabled }));
-        gEnter.select('.nv-distWrap').append('svg')
+        gEnter.select('.nv-distWrap').append('g')
             // .attr('height', availableHeight)
             // .attr('width', availableWidth)
             // .append('g')
@@ -372,7 +376,7 @@ nv.models.scatterChart = function() {
       var brushEnter = brushWrapEnter.append('g')
       var gBrush = brushWrap.select('g')
 
-      gEnter.append('svg').attr('class', 'nv-scatterWrap')
+      gEnter.append('g').attr('class', 'nv-scatterWrap')
 
       gBrush
         .attr('transform', 'translate(' + margin.left + ',' + (availableHeight + margin.top + brushHeight) +')')
@@ -504,7 +508,14 @@ nv.models.scatterChart = function() {
       // zoom behevior
       //========================
       var redraw = _.debounce(function () {
-        var duration = 250
+        // restore scale
+        g.select('.nv-scatterWrap')
+          .attr('visibility', 'hidden')
+          .attr("transform",
+            "translate(0,0)"
+            + " scale(1)")
+        var realScale = zoomer.realScale
+        var duration = 0
         g.selectAll('circle.nv-point')
           .transition().duration(duration)
           .attr('cx', function(d,i) { return x(scatter.x()(d,i)) })
@@ -516,11 +527,11 @@ nv.models.scatterChart = function() {
           .transition().duration(duration)
           .attr('x', function(d,i) { return x(scatter.x()(d,i)) - 20 })
           .attr('y', function(d,i) { return y(scatter.y()(d,i)) - 10 })
-          .style('opacity', function () { return zoomer.scale() > 2 ? 1 : 0 })
+          .style('opacity', function () { return realScale > 2 ? 1 : 0 })
         gBrush.selectAll('text.nv-point-text')
           .transition().duration(duration)
           .attr('x', function(d,i) { return x(scatter.x()(d,i)) - 20 })
-          .style('opacity', function () { return zoomer.scale() > 2 ? 1 : 0 })
+          .style('opacity', function () { return realScale > 2 ? 1 : 0 })
         g.select('.nv-distributionX')
           .attr('transform', 'translate(0,' + y.range()[0] + ')')
           .datum(data.filter(function(d) { return !d.disabled }))
@@ -530,49 +541,59 @@ nv.models.scatterChart = function() {
           .datum(data.filter(function(d) { return !d.disabled }))
           .call(distY);
 
-      }, 20)
+        g.select('.nv-lineWrap').selectAll('path.nv-line')
+          .attr('d',
+            d3.svg.line()
+              .x(function(d,i) { return x(getX(d,i)) })
+              .y(function(d,i) { return y(getY(d,i)) }))
+
+        g.select('.nv-scatterWrap')
+          .attr('visibility', 'visible')
+        zoomer.x(x).y(y)
+      }, 500)
 
       function updateScale (duration) {
-
-        // g.select('.nv-scatterWrap').attr("transform",
-        //     "translate("+d3.event.translate+")"
-        //     + " scale("+d3.event.scale+")");
-        // return
+        var realScale = zoomer.realScale = zoomer.baseDomain  / (x.domain()[1] -  x.domain()[0])
+        zoomer.realTranslate = [ zoomer.realTranslate[0] + d3.event.translate[0], zoomer.realTranslate[1] + d3.event.translate[1]]
         duration = duration || 0
         if (d3.event && d3.event.translate && d3.event.scale) {
           var w = scatter.width()
           var h = scatter.height()
           var t = d3.event.translate
-          var s = d3.event.scale
+          var s = realScale
           t[0] = Math.min(100 * s, Math.max(w * (1 - s) - 100 * s, t[0]))
           t[1] = Math.min(100 * s, Math.max(h * (1 - s) - 100 * s, t[1]))
           zoomer.translate(t);
+          g.select('.nv-scatterWrap').attr("transform",
+              "translate("+d3.event.translate+")" +
+              " scale("+d3.event.scale+")");
         }
         if (!g) return
+
         g.select('.nv-x.nv-axis')
-          .transition().duration(duration)
           .attr('transform', 'translate(0,' + y.range()[0] + ')')
           .call(chart.xAxis);
         g.select('.nv-y.nv-axis')
-          .transition().duration(duration)
           .call(chart.yAxis);
 
         redraw()
 
-        g.select('.nv-lineWrap').selectAll('path.nv-line')
-          .transition().duration(duration)
-          .attr('d',
-            d3.svg.line()
-              .x(function(d,i) { return x(getX(d,i)) })
-              .y(function(d,i) { return y(getY(d,i)) }))
-        scatter.updateInteractiveLayer()
+
+        // scatter.updateInteractiveLayer()
       }
-
       var zoomer = d3.behavior.zoom()
-
+      zoomer.baseDomain = x.domain()[1] - x.domain()[0]
+      zoomer.realTranslate = [0, 0]
       zoomer.x(x).y(y)
-        .scaleExtent([1, 12]).on('zoom', _.throttle(updateScale, 100, { trailing: false }))
-        // .scaleExtent([1, 4]).on('zoom', updateScale)
+        // .scaleExtent([1, 12]).on('zoom', _.throttle(updateScale, 100, { trailing: false }))
+        .scaleExtent([0, 4])
+        // .on('zoomstart', function () {
+        //   console.log('zoomstart')
+        // })
+        .on('zoom', updateScale)
+        // .on('zoomend', function (argument) {
+        //   console.log('zoomend')
+        // })
       wrap.call(zoomer)
       /*
       legend.dispatch.on('legendMouseover', function(d, i) {
